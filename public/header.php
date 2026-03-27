@@ -31,7 +31,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="prompts.php?search=&category=&author=">
-                            <i class="bi bi-collection me-1"></i>Mes Prompts
+                            <i class="bi bi-collection me-1"></i>All Prompts
                         </a>
                     </li>
                     <li class="nav-item">
