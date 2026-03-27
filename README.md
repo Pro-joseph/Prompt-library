@@ -31,9 +31,10 @@ Côté Développeur
 
 <h3>⚙️ Installation</h3><hr>
 Cloner le projet :
-Bash
-git clone [https://github.com/Pro-joseph/Prompt-library.git](https://github.com/Pro-joseph/Prompt-library.git)<hr>
 
+```Bash
+git clone [https://github.com/Pro-joseph/Prompt-library.git](https://github.com/Pro-joseph/Prompt-library.git)
+```
 Configuration de la base de données :<hr>
 <img width="756" height="526" alt="Screenshot (32)" src="https://github.com/user-attachments/assets/42d6af15-3364-46e5-9f51-7882a12e45f0" />
 
