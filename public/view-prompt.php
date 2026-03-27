@@ -87,10 +87,14 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
+                                <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $prompt['user_id']): ?>
                                 <li><a class="dropdown-item" href="edit-prompt.php?id=<?= $prompt['id'] ?>"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
+                                <?php endif; ?>
                                 <li><a class="dropdown-item" href="#"><i class="bi bi-share me-2"></i>Partager</a></li>
+                                <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $prompt['user_id']): ?>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="delete-prompt.php?id=<?= $prompt['id'] ?>"><i class="bi bi-trash me-2"></i>Supprimer</a></li>
+                                <?php endif; ?>
                             </ul>
                         </div>
                     </div>
@@ -123,7 +127,9 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- Action Buttons -->
                         <div class="d-flex flex-wrap gap-2">
                             <button class="btn btn-primary" id="copyWithVars"><i class="bi bi-clipboard-check me-2"></i>Copier avec variables</button>
+                            <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $prompt['user_id']): ?>
                             <a href="edit-prompt.php?id=<?= $prompt['id'] ?>" class="btn btn-outline-secondary"><i class="bi bi-pencil me-2"></i>Modifier</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
