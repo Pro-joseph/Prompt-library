@@ -1,4 +1,4 @@
-Prompt Repository 🚀 
+Prompt Repository 🚀 <br>
 Knowledge Base 
 Prompt Repository est une plateforme interne de Knowledge Management conçue pour DevGenius Solutions. Elle permet aux développeurs de centraliser, catégoriser et réutiliser des prompts LLM performants afin d'optimiser le workflow de l'agence.
 
