@@ -45,12 +45,12 @@
                     <div class="dropdown">
                         <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown">
                             <div class="avatar-sm me-2">JD</div>
-                            <span><?= $_SESSION['username']?></span>
+                            <span>Demo User</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?php echo ($_SESSION['role'] === 'admin') ? 'admin.php' : 'profile.php'; ?>"><i class="bi bi-person me-2"></i>Mon Profil</a></li>
+                            <li><a class="dropdown-item" href="profile.php"><i class="bi bi-person me-2"></i>Mon Profil</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
+                            <li><a class="dropdown-item text-danger" href="../index.php"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
                         </ul>
                     </div>
                 </div>

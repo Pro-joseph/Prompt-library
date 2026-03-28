@@ -1,35 +1,6 @@
 <?php
-require_once __DIR__ . '../../database/db.php';
-
+// Static demo version - no dynamic logic or database required
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    $username = trim($_POST['username']);
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
-    $confirm = $_POST['confirmPassword'];
-    $role = $_POST['role'];
-
-    // Validation
-    if ($password !== $confirm) {
-        die("Passwords do not match");
-    }
-
-    if (!in_array($role, ['admin', 'Developer'])) {
-        die("Invalid role");
-    }
-
-    // Hash password
-    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-    // Insert into DB
-    $stmt = $conn->prepare("
-        INSERT INTO users (username, email, password, role)
-        VALUES (?, ?, ?, ?)
-    ");
-
-    $stmt->execute([$username, $email, $hashedPassword, $role]);
-
-    // Redirect after success
     header("Location: login.php");
     exit();
 }

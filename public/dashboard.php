@@ -1,73 +1,6 @@
 <?php
-session_start();
-include ("../database/db.php");
+// Static demo version - no dynamic logic or database required
 include ("header.php");
-
-$user_id = $_SESSION['user_id'];
-
-// Fetch prompts depending on role
-if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'developer') {
-    $sql = "
-    SELECT prompts.*, users.username AS author, categories.name AS category
-    FROM prompts
-    JOIN users ON prompts.user_id = users.id
-    JOIN categories ON prompts.category_id = categories.id
-    ORDER BY prompts.created_at DESC
-    ";
-    $stmt = $conn->query($sql);
-} else {
-    $sql = "
-    SELECT prompts.*, users.username AS author, categories.name AS category
-    FROM prompts
-    JOIN users ON prompts.user_id = users.id
-    JOIN categories ON prompts.category_id = categories.id
-    WHERE prompts.user_id = ?
-    ORDER BY prompts.created_at DESC
-    ";
-    $stmt = $conn->prepare($sql);
-    $stmt->execute([$user_id]);
-}
-
-$prompts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Count total prompts for all users (for stats card)
-$sql = "SELECT COUNT(*) FROM prompts";
-$stmt = $conn->query($sql);
-$counter = $stmt->fetchColumn();
-
-// Total categories
-$sql = "SELECT COUNT(*) FROM categories";
-$stmt = $conn->query($sql);
-$counter_categories = $stmt->fetchColumn();
-
-// Contributeurs (unique users who created prompts)
-$sql = "SELECT DISTINCT user_id FROM prompts";
-$stmt = $conn->query($sql);
-$unique = $stmt->fetchAll(PDO::FETCH_COLUMN);
-$count = count($unique);
-
-// Mes prompts count
-$sql = "SELECT COUNT(*) FROM prompts WHERE user_id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->execute([$user_id]);
-$prompt_count = $stmt->fetchColumn();
-
-// Fetch top contributors ordered by number of prompts
-$sql = "
-    SELECT u.username, u.role, COUNT(p.id) AS total_prompts
-    FROM prompts p
-    JOIN users u ON p.user_id = u.id
-    GROUP BY p.user_id
-    ORDER BY total_prompts DESC
-    LIMIT 5
-";
-$stmt = $conn->query($sql);
-$top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-//categories in dashboard
-
-
-
 ?>
 
 
@@ -94,7 +27,7 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="welcome-banner p-4 rounded-3">
                         <div class="row align-items-center">
                             <div class="col-md-8">
-                                <h1 class="h3 fw-bold text-white mb-2">Bienvenue, <?= $_SESSION['username']?>!</h1>
+                                <h1 class="h3 fw-bold text-white mb-2">Bienvenue, Demo User!</h1>
                                 <p class="text-white-50 mb-0">Gérez et partagez vos prompts performants avec votre équipe.</p>
                             </div>
                             <div class="col-md-4 text-md-end mt-3 mt-md-0">
@@ -118,7 +51,7 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </div>
                                 <div>
                                     <p class="text-muted small mb-0">Total Prompts</p>
-                                    <h3 class="fw-bold mb-0"><?php echo $counter ?></h3>
+                                    <h3 class="fw-bold mb-0">124</h3>
                                 </div>
                             </div>
                         </div>
@@ -133,7 +66,7 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </div>
                                 <div>
                                     <p class="text-muted small mb-0">Mes Prompts</p>
-                                    <h3 class="fw-bold mb-0"><?php echo $prompt_count;?></h3>
+                                    <h3 class="fw-bold mb-0">12</h3>
                                 </div>
                             </div>
                         </div>
@@ -148,7 +81,7 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </div>
                                 <div>
                                     <p class="text-muted small mb-0">Catégories</p>
-                                    <h3 class="fw-bold mb-0"><?php echo $counter_categories ?></h3>
+                                    <h3 class="fw-bold mb-0">6</h3>
                                 </div>
                             </div>
                         </div>
@@ -163,7 +96,7 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </div>
                                 <div>
                                     <p class="text-muted small mb-0">Contributeurs</p>
-                                    <h3 class="fw-bold mb-0"><?php echo $count   ?></</h3>
+                                    <h3 class="fw-bold mb-0">8</h3>
                                 </div>
                             </div>
                         </div>
@@ -194,27 +127,34 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($prompts as $prompti): ?>
-                                            <tr>
-                                                <td><?= htmlspecialchars($prompti['title']) ?></td>
-                                                <td><span class="badge bg-secondary"><?= htmlspecialchars($prompti['category']) ?></span></td>
-                                                <td><?= htmlspecialchars($prompti['author']) ?></td>
-                                                <td><?= date('d M Y', strtotime($prompti['created_at'])) ?></td>
-                                                <td>
-
-                                                    <!-- Voir Button -->
-                                                    <a href="view-prompt.php?id=<?= $prompti['id'] ?>" class="btn btn-sm btn-outline-primary" title="Voir">
-                                                        <i class="bi bi-eye"></i>
-                                                    </a>
-
-                                                    <!-- Modifier Button -->
-                                                    <a href="edit-prompt.php?id=<?= $prompti['id'] ?>" class="btn btn-sm btn-outline-success" title="Modifier">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                            
-                                            <?php endforeach; ?>
+                                        <tr>
+                                            <td>Refactor Python Loop</td>
+                                            <td><span class="badge bg-secondary">Code</span></td>
+                                            <td>Demo User</td>
+                                            <td>27 Mar 2026</td>
+                                            <td>
+                                                <a href="view-prompt.php?id=1" class="btn btn-sm btn-outline-primary" title="Voir">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="edit-prompt.php?id=1" class="btn btn-sm btn-outline-success" title="Modifier">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>SQL Optimization Query</td>
+                                            <td><span class="badge bg-secondary">SQL</span></td>
+                                            <td>Alex Dev</td>
+                                            <td>25 Mar 2026</td>
+                                            <td>
+                                                <a href="view-prompt.php?id=2" class="btn btn-sm btn-outline-primary" title="Voir">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="edit-prompt.php?id=2" class="btn btn-sm btn-outline-success" title="Modifier">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
                                         
                                     </tbody>
                                 </table>
@@ -261,20 +201,30 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                             <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
-                        <?php foreach ($top_contributors as $user):?>
                         <li class="list-group-item d-flex align-items-center justify-content-between py-3">
                             <div class="d-flex align-items-center">
                                 <div class="avatar-sm me-3 bg-warning text-white d-flex align-items-center justify-content-center rounded-circle">
-                                    <?= strtoupper(substr($user['username'], 0, 2)) ?>
+                                    DU
                                 </div>
                                 <div>
-                                    <p class="mb-0 fw-medium"><?= htmlspecialchars($user['username']) ?></p>
-                                    <small class="text-muted"><?= htmlspecialchars($user['role']) ?></small>
+                                    <p class="mb-0 fw-medium">Demo User</p>
+                                    <small class="text-muted">developer</small>
                                 </div>
                             </div>
-                            <span class="badge bg-warning rounded-pill"><?= $user['total_prompts'] ?></span>
+                            <span class="badge bg-warning rounded-pill">12</span>
                         </li>
-                        <?php endforeach; ?>
+                        <li class="list-group-item d-flex align-items-center justify-content-between py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-3 bg-primary text-white d-flex align-items-center justify-content-center rounded-circle">
+                                    AD
+                                </div>
+                                <div>
+                                    <p class="mb-0 fw-medium">Alex Dev</p>
+                                    <small class="text-muted">admin</small>
+                                </div>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">45</span>
+                        </li>
                     </ul>
                 </div>
                     </div>

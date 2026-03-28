@@ -1,60 +1,10 @@
 <?php
-session_start();
-require_once __DIR__ . '/../database/db.php';
+// Static demo version - no dynamic logic or database required
 include ("header.php");
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
-
-// ===== FETCH CATEGORIES =====
-$stmt = $conn->query("SELECT id, name FROM categories ORDER BY name ASC");
-$categories = $stmt->fetchAll();
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    $title = trim($_POST['title']);
-    $category_id = $_POST['category'] ?? null;
-    $description = trim($_POST['description']);
-    $content = trim($_POST['content']);
-    $tags = trim($_POST['tags']);
-    $visibility = $_POST['visibility'] ?? 'public';
-    $user_id = $_SESSION['user_id'];
-
-    // ===== VALIDATION =====
-    if (empty($title) || empty($category_id) || empty($content)) {
-        $error = "Required fields missing";
-    } else {
-
-        // check category exists
-        $stmt = $conn->prepare("SELECT id FROM categories WHERE id = ?");
-        $stmt->execute([$category_id]);
-
-        if (!$stmt->fetch()) {
-            $error = "Invalid category";
-        } else {
-
-            // ===== INSERT =====
-            $sql = "INSERT INTO prompts 
-            (user_id, category_id, title, description, content, tags, visibility) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-
-            $stmt = $conn->prepare($sql);
-            $stmt->execute([
-                $user_id,
-                $category_id,
-                $title,
-                $description,
-                $content,
-                $tags,
-                $visibility
-            ]);
-
-            header("Location: dashboard.php");
-            exit;
-        }
-    }
+    header("Location: dashboard.php");
+    exit;
 }
 ?>
 

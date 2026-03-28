@@ -1,36 +1,9 @@
 <?php
-session_start();
-require_once __DIR__ . '../../database/db.php';
-
-// Only logged-in users
-if (!isset($_SESSION['user_id'])) {
-    header("Location: profile.php");
-    exit();
-}
-
+// Static demo version - no dynamic logic or database required
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $current = $_POST['currentPassword'];
-    $new = $_POST['newPassword'];
-    $confirm = $_POST['confirmPassword'];
-
-    // Fetch current password from DB
-    $stmt = $conn->prepare("SELECT password FROM users WHERE id = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$user || !password_verify($current, $user['password'])) {
-        $message = "Le mot de passe actuel est incorrect.";
-    } elseif ($new !== $confirm) {
-        $message = "Les nouveaux mots de passe ne correspondent pas.";
-    } else {
-        // Update password
-        $hashed = password_hash($new, PASSWORD_DEFAULT);
-        $update = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-        $update->execute([$hashed, $_SESSION['user_id']]);
-        $message = "Mot de passe mis à jour avec succès.";
-    }
+    $message = "Mot de passe mis à jour avec succès (Simulation).";
 }
 ?>
 

@@ -1,29 +1,8 @@
 <?php
-session_start();
-require_once __DIR__ . '../../database/db.php';
-
-
-
+// Static demo version - no dynamic logic or database required
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $usernameOrEmail = trim($_POST['usernameOrEmail']);
-    $password = $_POST['password'];
-
-    // Fetch user by username or email
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-    $stmt->execute([$usernameOrEmail, $usernameOrEmail]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($user && password_verify($password, $user['password'])) {
-        // Login success
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
-
-        header("Location: dashboard.php"); // redirect to dashboard
-        exit();
-    } else {
-        $error = "Nom d'utilisateur/email ou mot de passe incorrect";
-    }
+    header("Location: dashboard.php");
+    exit();
 }
 ?>
 <!DOCTYPE html>

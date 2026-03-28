@@ -1,66 +1,18 @@
 <?php
-session_start();
-require_once "../database/db.php"; // your database connection
-include("header.php"); // your header
+// Static demo version - no dynamic logic or database required
+include("header.php");
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
-}
+$prompt = [
+    'id' => 1,
+    'title' => 'Refactor Python Loop',
+    'content' => "Can you help me refactor this nested loop into a more efficient list comprehension in Python?\n\n```python\nresult = []\nfor i in range(10):\n    for j in range(5):\n        if i % 2 == 0:\n            result.append(i * j)\n```",
+    'category_id' => 1
+];
 
-// Get prompt ID from GET
-$prompt_id = $_GET['id'] ?? null;
-if (!$prompt_id) {
-    header("Location: index.php");
-    exit();
-}
-
-// Fetch prompt from DB
-$stmt = $conn->prepare("SELECT * FROM prompts WHERE id = :id");
-$stmt->execute([':id' => $prompt_id]);
-$prompt = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$prompt) {
-    echo "<p>Prompt not found.</p>";
-    exit();
-}
-
-// Check if current user is owner or admin
-if ($prompt['user_id'] != $_SESSION['user_id'] && $_SESSION['role'] != 'admin') {
-    echo "<p>You don't have permission to edit this prompt.</p>";
-    exit();
-}
-
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title']);
-    $content = trim($_POST['content']);
-    $category_id = (int)$_POST['category_id'];
-
-    // Basic validation
-    if (empty($title) || empty($content) || !$category_id) {
-        $error = "All fields are required.";
-    } else {
-        $update = $conn->prepare("
-            UPDATE prompts 
-            SET title = :title, content = :content, category_id = :category_id
-            WHERE id = :id
-        ");
-        $update->execute([
-            ':title' => $title,
-            ':content' => $content,
-            ':category_id' => $category_id,
-            ':id' => $prompt_id
-        ]);
-        header("Location: view-prompt.php?id=". $prompt['id']);
-        exit();
-    }
+    header("Location: view-prompt.php?id=1");
+    exit();
 }
-
-// Fetch categories for dropdown
-$categories_stmt = $conn->query("SELECT * FROM categories");
-$categories = $categories_stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="container mt-4">
@@ -78,12 +30,10 @@ $categories = $categories_stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="mb-3">
             <label class="form-label">Category</label>
             <select name="category_id" class="form-select" required>
-                <option value="">Select category</option>
-                <?php foreach ($categories as $cat): ?>
-                    <option value="<?= $cat['id'] ?>" <?= $cat['id'] == $prompt['category_id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($cat['name']) ?>
-                    </option>
-                <?php endforeach; ?>
+                <option value="1" selected>Code</option>
+                <option value="2">SQL</option>
+                <option value="3">DevOps</option>
+                <option value="4">Marketing</option>
             </select>
         </div>
         <button type="submit" class="btn btn-primary">Update Prompt</button>

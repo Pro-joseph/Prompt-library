@@ -1,52 +1,27 @@
 <?php
-session_start();
-include("../database/db.php");
+// Static demo version - no dynamic logic or database required
 include("header.php");
 
-// Fetch prompt info  prompt by id
-$prompt_id = $_GET['id'] ?? null;
+$prompt = [
+    'id' => 1,
+    'title' => 'Refactor Python Loop',
+    'description' => 'A prompt to refactor nested loops into list comprehensions.',
+    'content' => "Can you help me refactor this nested loop into a more efficient list comprehension in Python?\n\n```python\nresult = []\nfor i in range(10):\n    for j in range(5):\n        if i % 2 == 0:\n            result.append(i * j)\n```",
+    'category' => 'Code',
+    'tags' => 'python,optimization,clean-code',
+    'user_id' => 1,
+    'author' => 'Demo User'
+];
 
-if (!$prompt_id) {
-    die("Invalid prompt ID");
-}
+$related_prompts = [
+    ['id' => 2, 'title' => 'Optimize JOIN Query', 'description' => 'Improve performance of complex SQL joins.', 'category' => 'SQL'],
+    ['id' => 3, 'title' => 'Email Campaign Copy', 'description' => 'Professional email copy for product launches.', 'category' => 'Marketing']
+];
 
-$stmt = $conn->prepare("
-    SELECT prompts.*, users.username AS author, categories.name AS category
-    FROM prompts
-    JOIN users ON prompts.user_id = users.id
-    JOIN categories ON prompts.category_id = categories.id
-    WHERE prompts.id = ?
-");
-$stmt->execute([$prompt_id]);
-$prompt = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$prompt) {
-    die("Prompt not found");
-}
-
-// Fetch related prompts (same category)
-$stmt = $conn->prepare("
-    SELECT prompts.*, categories.name AS category
-    FROM prompts
-    JOIN categories ON prompts.category_id = categories.id
-    WHERE prompts.category_id = ? 
-    AND prompts.id != ?
-    LIMIT 4
-");
-
-$stmt->execute([$prompt['category_id'], $prompt_id]);
-$related_prompts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Fetch top contributors
-$stmt = $conn->query("
-    SELECT users.username, COUNT(prompts.id) AS total_prompts
-    FROM prompts
-    JOIN users ON prompts.user_id = users.id
-    GROUP BY users.id
-    ORDER BY total_prompts DESC
-    LIMIT 5
-");
-$top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$top_contributors = [
+    ['username' => 'Demo User', 'total_prompts' => 12],
+    ['username' => 'Alex Dev', 'total_prompts' => 45]
+];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -87,14 +62,10 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $prompt['user_id']): ?>
-                                <li><a class="dropdown-item" href="edit-prompt.php?id=<?= $prompt['id'] ?>"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
-                                <?php endif; ?>
+                                <li><a class="dropdown-item" href="edit-prompt.php?id=1"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
                                 <li><a class="dropdown-item" href="#"><i class="bi bi-share me-2"></i>Partager</a></li>
-                                <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $prompt['user_id']): ?>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="delete-prompt.php?id=<?= $prompt['id'] ?>"><i class="bi bi-trash me-2"></i>Supprimer</a></li>
-                                <?php endif; ?>
+                                <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash me-2"></i>Supprimer</a></li>
                             </ul>
                         </div>
                     </div>
@@ -111,26 +82,15 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="mb-4">
                             <h6 class="fw-bold mb-3">Tags</h6>
                             <div class="d-flex flex-wrap gap-2">
-                                <?php
-                                $tags = explode(',', $prompt['tags'] ?? '');
-                                foreach ($tags as $tag):
-                                    if(trim($tag)):
-                                ?>
-                                    <span class="badge bg-secondary"><?= htmlspecialchars(trim($tag)) ?></span>
-                                <?php
-                                    endif;
-                                endforeach;
-                                ?>
+                                    <span class="badge bg-secondary">python</span>
+                                    <span class="badge bg-secondary">optimization</span>
+                                    <span class="badge bg-secondary">clean-code</span>
                             </div>
                         </div>
 
                         <!-- Action Buttons -->
-                        <div class="d-flex flex-wrap gap-2">
                             <button class="btn btn-primary" id="copyWithVars"><i class="bi bi-clipboard-check me-2"></i>Copier avec variables</button>
-                            <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $prompt['user_id']): ?>
-                            <a href="edit-prompt.php?id=<?= $prompt['id'] ?>" class="btn btn-outline-secondary"><i class="bi bi-pencil me-2"></i>Modifier</a>
-                            <?php endif; ?>
-                        </div>
+                            <a href="edit-prompt.php?id=1" class="btn btn-outline-secondary"><i class="bi bi-pencil me-2"></i>Modifier</a>
                     </div>
                 </div>
 
@@ -141,19 +101,28 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <?php foreach($related_prompts as $rp): ?>
                             <div class="col-md-6">
-                                <a href="view-prompt.php?id=<?= $rp['id'] ?>" class="text-decoration-none">
+                                <a href="view-prompt.php?id=2" class="text-decoration-none">
                                     <div class="card border h-100 prompt-card-mini">
                                         <div class="card-body">
-                                            <span class="badge bg-primary-subtle text-primary small mb-2"><?= htmlspecialchars($rp['category']) ?></span>
-                                            <h6 class="fw-bold text-dark mb-1"><?= htmlspecialchars($rp['title']) ?></h6>
-                                            <p class="text-muted small mb-0"><?= htmlspecialchars($rp['description']) ?></p>
+                                            <span class="badge bg-primary-subtle text-primary small mb-2">SQL</span>
+                                            <h6 class="fw-bold text-dark mb-1">Optimize JOIN Query</h6>
+                                            <p class="text-muted small mb-0">Improve performance of complex SQL joins.</p>
                                         </div>
                                     </div>
                                 </a>
                             </div>
-                            <?php endforeach; ?>
+                            <div class="col-md-6">
+                                <a href="view-prompt.php?id=3" class="text-decoration-none">
+                                    <div class="card border h-100 prompt-card-mini">
+                                        <div class="card-body">
+                                            <span class="badge bg-primary-subtle text-primary small mb-2">Marketing</span>
+                                            <h6 class="fw-bold text-dark mb-1">Email Campaign Copy</h6>
+                                            <p class="text-muted small mb-0">Professional email copy for product launches.</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -167,18 +136,26 @@ $top_contributors = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="card-body p-0">
                         <ul class="list-group list-group-flush">
-                            <?php foreach ($top_contributors as $c): ?>
                             <li class="list-group-item d-flex align-items-center justify-content-between py-3">
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-sm me-3 bg-warning"><?= strtoupper(substr($c['username'],0,2)) ?></div>
+                                    <div class="avatar-sm me-3 bg-warning">DU</div>
                                     <div>
-                                        <p class="mb-0 fw-medium"><?= htmlspecialchars($c['username']) ?></p>
+                                        <p class="mb-0 fw-medium">Demo User</p>
                                         <small class="text-muted">Développeur</small>
                                     </div>
                                 </div>
-                                <span class="badge bg-warning rounded-pill"><?= $c['total_prompts'] ?></span>
+                                <span class="badge bg-warning rounded-pill">12</span>
                             </li>
-                            <?php endforeach; ?>
+                            <li class="list-group-item d-flex align-items-center justify-content-between py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm me-3 bg-primary">AD</div>
+                                    <div>
+                                        <p class="mb-0 fw-medium">Alex Dev</p>
+                                        <small class="text-muted">Admin</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-warning rounded-pill">45</span>
+                            </li>
                         </ul>
                     </div>
                 </div>
