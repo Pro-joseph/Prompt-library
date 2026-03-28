@@ -1,4 +1,4 @@
-<h3>Prompt Repository 🚀</h3><hr>
+<h3>Prompt Library 🚀</h3><hr>
 Knowledge Base 
 Prompt Repository est une plateforme interne de Knowledge Management conçue pour DevGenius Solutions. Elle permet aux développeurs de centraliser, catégoriser et réutiliser des prompts LLM performants afin d'optimiser le workflow de l'agence.<hr>
 
@@ -31,9 +31,10 @@ Côté Développeur
 
 <h3>⚙️ Installation</h3><hr>
 Cloner le projet :
-Bash
-git clone [https://github.com/Pro-joseph/Prompt-library.git](https://github.com/Pro-joseph/Prompt-library.git)<hr>
 
+```Bash
+git clone [https://github.com/Pro-joseph/Prompt-library.git](https://github.com/Pro-joseph/Prompt-library.git)
+```
 Configuration de la base de données :<hr>
 <img width="756" height="526" alt="Screenshot (32)" src="https://github.com/user-attachments/assets/42d6af15-3364-46e5-9f51-7882a12e45f0" />
 
