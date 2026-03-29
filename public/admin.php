@@ -1,13 +1,14 @@
 <?php
 session_start();
 require_once "../database/db.php";
-include ("header.php");
 
 // Only admin allowed
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit();
 }
+
+include ("header.php");
 
 
 // ===== CATEGORIES =====
@@ -319,8 +320,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </nav>
                         </div>
                     </div>
-                </div>
+                </div><!-- end tab-pane users -->
+            </div><!-- end tab-content -->
+        </div><!-- end container-fluid -->
     </main>
+
 
     <!-- Add Category Modal -->
     <div class="modal fade" id="addCategoryModal" tabindex="-1">

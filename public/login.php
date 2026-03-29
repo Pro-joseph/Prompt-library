@@ -1,8 +1,41 @@
 <?php
-// Static demo version - no dynamic logic or database required
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+session_start();
+require_once '../database/db.php';
+
+// If already logged in, redirect to dashboard
+if (isset($_SESSION['user_id'])) {
     header("Location: dashboard.php");
     exit();
+}
+
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $usernameOrEmail = trim($_POST['usernameOrEmail'] ?? '');
+    $password        = $_POST['password'] ?? '';
+
+    if (empty($usernameOrEmail) || empty($password)) {
+        $error = "Veuillez remplir tous les champs.";
+    } else {
+        $stmt = $conn->prepare("SELECT * FROM users WHERE username = :uoe OR email = :uoe2 LIMIT 1");
+        $stmt->execute([':uoe' => $usernameOrEmail, ':uoe2' => $usernameOrEmail]);
+        $user = $stmt->fetch();
+
+        if ($user && password_verify($password, $user['password'])) {
+            $_SESSION['user_id']  = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role']     = $user['role'];
+
+            if ($user['role'] === 'admin') {
+                header("Location: admin.php");
+            } else {
+                header("Location: dashboard.php");
+            }
+            exit();
+        } else {
+            $error = "Identifiants invalides. Veuillez réessayer.";
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -26,14 +59,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <h1 class="h4 fw-bold mt-2">Connexion</h1>
         </div>
 
-        <?php if(!empty($error)): ?>
+        <?php if (!empty($error)): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
         <form action="" method="POST">
           <div class="mb-3">
             <label class="form-label">Nom d'utilisateur ou Email</label>
-            <input type="text" name="usernameOrEmail" class="form-control" required>
+            <input type="text" name="usernameOrEmail" class="form-control"
+                   value="<?= htmlspecialchars($_POST['usernameOrEmail'] ?? '') ?>" required>
           </div>
 
           <div class="mb-3">

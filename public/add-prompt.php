@@ -1,11 +1,40 @@
 <?php
-// Static demo version - no dynamic logic or database required
-include ("header.php");
+session_start();
+require_once '../database/db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    header("Location: dashboard.php");
-    exit;
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
 }
+
+$user_id = $_SESSION['user_id'];
+
+// --- Handle form submission ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $title       = trim($_POST['title'] ?? '');
+    $category_id = (int)($_POST['category'] ?? 0);
+    $description = trim($_POST['description'] ?? '');
+    $content     = trim($_POST['content'] ?? '');
+    $tags        = trim($_POST['tags'] ?? '');
+    $visibility  = $_POST['visibility'] ?? 'public';
+
+    if (empty($title) || empty($content) || $category_id === 0) {
+        $error = "Le titre, la catégorie et le contenu sont obligatoires.";
+    } else {
+        $stmt = $conn->prepare("
+            INSERT INTO prompts (title, category_id, description, content, tags, visibility, user_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([$title, $category_id, $description, $content, $tags, $visibility, $user_id]);
+
+        header("Location: dashboard.php");
+        exit();
+    }
+}
+
+// Load categories for the select dropdown
+$categories = $conn->query("SELECT id, name FROM categories ORDER BY name")->fetchAll();
+
 ?>
 
 <!DOCTYPE html>
@@ -19,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
-
+<?php include('header.php'); ?>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -37,6 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p class="text-muted mb-0">Partagez votre prompt performant avec l'équipe</p>
             </div>
 
+            <?php if (isset($error)): ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+
             <div class="row">
                 <div class="col-lg-8">
                     <div class="card border-0 shadow-sm">
@@ -45,7 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <!-- Title -->
                                 <div class="mb-4">
                                     <label for="title" class="form-label fw-medium">Titre du prompt <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control form-control-lg" id="title" name="title" placeholder="Ex: Générateur d'API REST" required>
+                                    <input type="text" class="form-control form-control-lg" id="title" name="title"
+                                           value="<?= htmlspecialchars($_POST['title'] ?? '') ?>"
+                                           placeholder="Ex: Générateur d'API REST" required>
                                     <div class="form-text">Un titre clair et descriptif pour identifier facilement ce prompt</div>
                                 </div>
 
@@ -54,27 +89,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <label for="category" class="form-label fw-medium">Catégorie <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-lg" id="category" name="category" required>
                                         <option value="" selected disabled>Sélectionnez une catégorie</option>
-                                        <option value="1">Code</option>
-                                        <option value="2">SQL</option>
-                                        <option value="3">DevOps</option>
-                                        <option value="4">Marketing</option>
-                                        <option value="5">Documentation</option>
-                                        <option value="6">Testing</option>
-                                        <option value="7">Design</option>
-                                        <option value="8">Autre</option>
+                                        <?php foreach ($categories as $cat): ?>
+                                        <option value="<?= $cat['id'] ?>"
+                                            <?= (isset($_POST['category']) && $_POST['category'] == $cat['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($cat['name']) ?>
+                                        </option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
 
                                 <!-- Description -->
                                 <div class="mb-4">
                                     <label for="description" class="form-label fw-medium">Description</label>
-                                    <textarea class="form-control" id="description" name="description" rows="3" placeholder="Décrivez brièvement ce que fait ce prompt et quand l'utiliser..."></textarea>
+                                    <textarea class="form-control" id="description" name="description" rows="3"
+                                              placeholder="Décrivez brièvement ce que fait ce prompt et quand l'utiliser..."><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
                                 </div>
 
                                 <!-- Prompt Content -->
                                 <div class="mb-4">
                                     <label for="content" class="form-label fw-medium">Contenu du prompt <span class="text-danger">*</span></label>
-                                    <textarea class="form-control font-monospace" id="content" name="content" rows="10" placeholder="Tu es un expert [DOMAINE]. [INSTRUCTIONS DETAILLEES]..." required></textarea>
+                                    <textarea class="form-control font-monospace" id="content" name="content" rows="10"
+                                              placeholder="Tu es un expert [DOMAINE]. [INSTRUCTIONS DETAILLEES]..." required><?= htmlspecialchars($_POST['content'] ?? '') ?></textarea>
                                     <div class="form-text">
                                         <i class="bi bi-lightbulb me-1"></i>
                                         Utilisez [VARIABLE] pour indiquer les parties à personnaliser
@@ -92,7 +127,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <!-- Tags -->
                                 <div class="mb-4">
                                     <label for="tags" class="form-label fw-medium">Tags</label>
-                                    <input type="text" class="form-control" id="tags" name="tags" placeholder="api, rest, node, express (séparés par des virgules)">
+                                    <input type="text" class="form-control" id="tags" name="tags"
+                                           value="<?= htmlspecialchars($_POST['tags'] ?? '') ?>"
+                                           placeholder="api, rest, node, express (séparés par des virgules)">
                                     <div class="form-text">Ajoutez des tags pour faciliter la recherche</div>
                                 </div>
 
@@ -190,8 +227,7 @@ Format de sortie :
 
 Exemple :
 [EXEMPLE SI NECESSAIRE]
-</code>
-</pre>
+</code></pre>
                         </div>
                     </div>
                 </div>
@@ -240,6 +276,7 @@ Exemple :
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Detect variables in prompt content
         const contentTextarea = document.getElementById('content');

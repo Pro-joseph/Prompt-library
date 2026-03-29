@@ -1,9 +1,56 @@
 <?php
-// Static demo version - no dynamic logic or database required
-include ("header.php");
+session_start();
+require_once '../database/db.php';
+
+// Require login
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+
+// ===== STATS =====
+$total_prompts     = $conn->query("SELECT COUNT(*) FROM prompts")->fetchColumn();
+$my_prompts_count  = $conn->prepare("SELECT COUNT(*) FROM prompts WHERE user_id = ?");
+$my_prompts_count->execute([$user_id]);
+$my_prompts_count  = $my_prompts_count->fetchColumn();
+
+$total_categories  = $conn->query("SELECT COUNT(*) FROM categories")->fetchColumn();
+$total_contributors = $conn->query("SELECT COUNT(DISTINCT user_id) FROM prompts")->fetchColumn();
+
+// ===== MY RECENT PROMPTS =====
+$stmt = $conn->prepare("
+    SELECT p.id, p.title, c.name as category, u.username as author, p.created_at
+    FROM prompts p
+    LEFT JOIN categories c ON c.id = p.category_id
+    LEFT JOIN users u ON u.id = p.user_id
+    WHERE p.user_id = :uid
+    ORDER BY p.created_at DESC
+    LIMIT 5
+");
+$stmt->execute([':uid' => $user_id]);
+$my_prompts = $stmt->fetchAll();
+
+// ===== CATEGORIES =====
+$categories = $conn->query("
+    SELECT c.id, c.name, c.color, c.icon, COUNT(p.id) as total
+    FROM categories c
+    LEFT JOIN prompts p ON p.category_id = c.id
+    GROUP BY c.id
+")->fetchAll();
+
+// ===== TOP CONTRIBUTORS =====
+$top_contributors = $conn->query("
+    SELECT u.username, u.role, COUNT(p.id) as total_prompts
+    FROM prompts p
+    JOIN users u ON u.id = p.user_id
+    GROUP BY u.id
+    ORDER BY total_prompts DESC
+    LIMIT 5
+")->fetchAll();
+
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -16,7 +63,7 @@ include ("header.php");
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
-
+<?php include('header.php'); ?>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -27,7 +74,7 @@ include ("header.php");
                     <div class="welcome-banner p-4 rounded-3">
                         <div class="row align-items-center">
                             <div class="col-md-8">
-                                <h1 class="h3 fw-bold text-white mb-2">Bienvenue, Demo User!</h1>
+                                <h1 class="h3 fw-bold text-white mb-2">Bienvenue, <?= htmlspecialchars($_SESSION['username']) ?>!</h1>
                                 <p class="text-white-50 mb-0">Gérez et partagez vos prompts performants avec votre équipe.</p>
                             </div>
                             <div class="col-md-4 text-md-end mt-3 mt-md-0">
@@ -51,7 +98,7 @@ include ("header.php");
                                 </div>
                                 <div>
                                     <p class="text-muted small mb-0">Total Prompts</p>
-                                    <h3 class="fw-bold mb-0">124</h3>
+                                    <h3 class="fw-bold mb-0"><?= $total_prompts ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -66,7 +113,7 @@ include ("header.php");
                                 </div>
                                 <div>
                                     <p class="text-muted small mb-0">Mes Prompts</p>
-                                    <h3 class="fw-bold mb-0">12</h3>
+                                    <h3 class="fw-bold mb-0"><?= $my_prompts_count ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -81,7 +128,7 @@ include ("header.php");
                                 </div>
                                 <div>
                                     <p class="text-muted small mb-0">Catégories</p>
-                                    <h3 class="fw-bold mb-0">6</h3>
+                                    <h3 class="fw-bold mb-0"><?= $total_categories ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -96,7 +143,7 @@ include ("header.php");
                                 </div>
                                 <div>
                                     <p class="text-muted small mb-0">Contributeurs</p>
-                                    <h3 class="fw-bold mb-0">8</h3>
+                                    <h3 class="fw-bold mb-0"><?= $total_contributors ?></h3>
                                 </div>
                             </div>
                         </div>
@@ -121,41 +168,34 @@ include ("header.php");
                                         <tr>
                                             <th class="border-0 ps-4">Titre</th>
                                             <th class="border-0">Catégorie</th>
-                                            <th class="border-0">Auteur</th>
                                             <th class="border-0">Date</th>
-                                            <th class="border-0 text-end pe-4 text-center">Actions</th>
+                                            <th class="border-0 text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        <?php if (empty($my_prompts)): ?>
                                         <tr>
-                                            <td>Refactor Python Loop</td>
-                                            <td><span class="badge bg-secondary">Code</span></td>
-                                            <td>Demo User</td>
-                                            <td>27 Mar 2026</td>
-                                            <td>
-                                                <a href="view-prompt.php?id=1" class="btn btn-sm btn-outline-primary" title="Voir">
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                Aucun prompt. <a href="add-prompt.php">Créez votre premier prompt !</a>
+                                            </td>
+                                        </tr>
+                                        <?php else: ?>
+                                        <?php foreach ($my_prompts as $prompt): ?>
+                                        <tr>
+                                            <td class="ps-4"><?= htmlspecialchars($prompt['title']) ?></td>
+                                            <td><span class="badge bg-secondary"><?= htmlspecialchars($prompt['category'] ?? 'N/A') ?></span></td>
+                                            <td><?= date('d M Y', strtotime($prompt['created_at'])) ?></td>
+                                            <td class="text-center">
+                                                <a href="view-prompt.php?id=<?= $prompt['id'] ?>" class="btn btn-sm btn-outline-primary" title="Voir">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                <a href="edit-prompt.php?id=1" class="btn btn-sm btn-outline-success" title="Modifier">
+                                                <a href="edit-prompt.php?id=<?= $prompt['id'] ?>" class="btn btn-sm btn-outline-success" title="Modifier">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                             </td>
                                         </tr>
-                                        <tr>
-                                            <td>SQL Optimization Query</td>
-                                            <td><span class="badge bg-secondary">SQL</span></td>
-                                            <td>Alex Dev</td>
-                                            <td>25 Mar 2026</td>
-                                            <td>
-                                                <a href="view-prompt.php?id=2" class="btn btn-sm btn-outline-primary" title="Voir">
-                                                    <i class="bi bi-eye"></i>
-                                                </a>
-                                                <a href="edit-prompt.php?id=2" class="btn btn-sm btn-outline-success" title="Modifier">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        
+                                        <?php endforeach; ?>
+                                        <?php endif; ?>
                                     </tbody>
                                 </table>
                             </div>
@@ -172,24 +212,14 @@ include ("header.php");
                         </div>
                         <div class="card-body">
                             <div class="d-flex flex-wrap gap-2">
-                                <a href="prompts.php?search=&category=1&author=" class="btn btn-outline-primary btn-sm">
-                                    <i class="bi bi-code-slash me-1"></i>Code <span class="badge bg-primary ms-1"></span>
+                                <?php foreach ($categories as $cat): ?>
+                                <a href="prompts.php?search=&category=<?= $cat['id'] ?>&author=" 
+                                   class="btn btn-outline-<?= htmlspecialchars($cat['color'] ?? 'primary') ?> btn-sm">
+                                    <i class="bi bi-<?= htmlspecialchars($cat['icon'] ?? 'tag') ?> me-1"></i>
+                                    <?= htmlspecialchars($cat['name']) ?>
+                                    <span class="badge bg-<?= htmlspecialchars($cat['color'] ?? 'primary') ?> ms-1"><?= $cat['total'] ?></span>
                                 </a>
-                                <a href="prompts.php?search=&category=4&author=" class="btn btn-outline-success btn-sm">
-                                    <i class="bi bi-database me-1"></i>SQL <span class="badge bg-success ms-1"></span>
-                                </a>
-                                <a href="prompts.php?search=&category=3&author=" class="btn btn-outline-info btn-sm">
-                                    <i class="bi bi-gear me-1"></i>DevOps <span class="badge bg-info ms-1"></span>
-                                </a>
-                                <a href="prompts.php?search=&category=2&author=" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-megaphone me-1"></i>Marketing <span class="badge bg-danger ms-1"></span>
-                                </a>
-                                <a href="prompts.php?search=&category=1&author=" class="btn btn-outline-warning btn-sm">
-                                    <i class="bi bi-file-text me-1"></i>Docs <span class="badge bg-warning ms-1"></span>
-                                </a>
-                                <a href="prompts.php?search=&category=5&author=" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-bug me-1"></i>Testing <span class="badge bg-secondary ms-1"></span>
-                                </a>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     </div>
@@ -197,38 +227,26 @@ include ("header.php");
                     <!-- Top Contributors -->
                     <div class="card border-0 shadow-sm">
                         <div class="card-header bg-white border-0 py-3">
-                                <h5 class="card-title mb-0 fw-bold">Top Contributeurs</h5>
+                            <h5 class="card-title mb-0 fw-bold">Top Contributeurs</h5>
                         </div>
-                            <div class="card-body p-0">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex align-items-center justify-content-between py-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm me-3 bg-warning text-white d-flex align-items-center justify-content-center rounded-circle">
-                                    DU
-                                </div>
-                                <div>
-                                    <p class="mb-0 fw-medium">Demo User</p>
-                                    <small class="text-muted">developer</small>
-                                </div>
-                            </div>
-                            <span class="badge bg-warning rounded-pill">12</span>
-                        </li>
-                        <li class="list-group-item d-flex align-items-center justify-content-between py-3">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-sm me-3 bg-primary text-white d-flex align-items-center justify-content-center rounded-circle">
-                                    AD
-                                </div>
-                                <div>
-                                    <p class="mb-0 fw-medium">Alex Dev</p>
-                                    <small class="text-muted">admin</small>
-                                </div>
-                            </div>
-                            <span class="badge bg-primary rounded-pill">45</span>
-                        </li>
-                    </ul>
-                </div>
-                    </div>
-</div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                <?php foreach ($top_contributors as $contrib): ?>
+                                <li class="list-group-item d-flex align-items-center justify-content-between py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm me-3 bg-primary text-white d-flex align-items-center justify-content-center rounded-circle">
+                                            <?= strtoupper(substr($contrib['username'], 0, 2)) ?>
+                                        </div>
+                                        <div>
+                                            <p class="mb-0 fw-medium"><?= htmlspecialchars($contrib['username']) ?></p>
+                                            <small class="text-muted"><?= htmlspecialchars($contrib['role']) ?></small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill"><?= $contrib['total_prompts'] ?></span>
+                                </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -251,5 +269,6 @@ include ("header.php");
         </div>
     </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

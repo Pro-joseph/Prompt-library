@@ -1,40 +1,71 @@
 <?php
-// Static demo version - no dynamic logic or database required
+session_start();
+require_once '../database/db.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$id = (int)($_GET['id'] ?? 0);
+
+if ($id === 0) {
+    header("Location: prompts.php");
+    exit();
+}
+
+// Fetch the prompt
+$stmt = $conn->prepare("
+    SELECT p.*, c.name as category, u.username as author
+    FROM prompts p
+    LEFT JOIN categories c ON c.id = p.category_id
+    LEFT JOIN users u ON u.id = p.user_id
+    WHERE p.id = ?
+");
+$stmt->execute([$id]);
+$prompt = $stmt->fetch();
+
+if (!$prompt) {
+    header("Location: prompts.php");
+    exit();
+}
+
+// Related prompts (same category, exclude current)
+$stmt2 = $conn->prepare("
+    SELECT p.id, p.title, p.description, c.name as category
+    FROM prompts p
+    LEFT JOIN categories c ON c.id = p.category_id
+    WHERE p.category_id = ? AND p.id != ?
+    LIMIT 4
+");
+$stmt2->execute([$prompt['category_id'], $id]);
+$related_prompts = $stmt2->fetchAll();
+
+// Top contributors
+$top_contributors = $conn->query("
+    SELECT u.username, u.role, COUNT(p.id) as total_prompts
+    FROM prompts p
+    JOIN users u ON u.id = p.user_id
+    GROUP BY u.id
+    ORDER BY total_prompts DESC
+    LIMIT 5
+")->fetchAll();
+
 include("header.php");
-
-$prompt = [
-    'id' => 1,
-    'title' => 'Refactor Python Loop',
-    'description' => 'A prompt to refactor nested loops into list comprehensions.',
-    'content' => "Can you help me refactor this nested loop into a more efficient list comprehension in Python?\n\n```python\nresult = []\nfor i in range(10):\n    for j in range(5):\n        if i % 2 == 0:\n            result.append(i * j)\n```",
-    'category' => 'Code',
-    'tags' => 'python,optimization,clean-code',
-    'user_id' => 1,
-    'author' => 'Demo User'
-];
-
-$related_prompts = [
-    ['id' => 2, 'title' => 'Optimize JOIN Query', 'description' => 'Improve performance of complex SQL joins.', 'category' => 'SQL'],
-    ['id' => 3, 'title' => 'Email Campaign Copy', 'description' => 'Professional email copy for product launches.', 'category' => 'Marketing']
-];
-
-$top_contributors = [
-    ['username' => 'Demo User', 'total_prompts' => 12],
-    ['username' => 'Alex Dev', 'total_prompts' => 45]
-];
 ?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($prompt['title'] ?? 'Prompt') ?> - Prompt Repository</title>
+    <title><?= htmlspecialchars($prompt['title']) ?> - Prompt Repository</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
-<!-- Navbar here (same as your template) -->
 
 <main class="main-content">
     <div class="container-fluid py-4">
@@ -43,7 +74,7 @@ $top_contributors = [
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="dashboard.php" class="text-decoration-none">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="prompts.php" class="text-decoration-none">Prompts</a></li>
-                <li class="breadcrumb-item active"><?= htmlspecialchars($prompt['title'] ?? 'Prompt') ?></li>
+                <li class="breadcrumb-item active"><?= htmlspecialchars($prompt['title']) ?></li>
             </ol>
         </nav>
 
@@ -54,20 +85,28 @@ $top_contributors = [
                     <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-start">
                         <div>
                             <span class="badge bg-primary-subtle text-primary mb-2"><?= htmlspecialchars($prompt['category'] ?? '') ?></span>
-                            <h1 class="h3 fw-bold mb-1"><?= htmlspecialchars($prompt['title'] ?? '') ?></h1>
+                            <h1 class="h3 fw-bold mb-1"><?= htmlspecialchars($prompt['title']) ?></h1>
                             <p class="text-muted mb-0"><?= htmlspecialchars($prompt['description'] ?? '') ?></p>
+                            <small class="text-muted">Par <?= htmlspecialchars($prompt['author']) ?></small>
                         </div>
+                        <?php if ($prompt['user_id'] == $user_id || $_SESSION['role'] === 'admin'): ?>
                         <div class="dropdown">
                             <button class="btn btn-outline-secondary" data-bs-toggle="dropdown">
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="edit-prompt.php?id=1"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="bi bi-share me-2"></i>Partager</a></li>
+                                <li><a class="dropdown-item" href="edit-prompt.php?id=<?= $id ?>"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash me-2"></i>Supprimer</a></li>
+                                <li>
+                                    <a class="dropdown-item text-danger"
+                                       href="edit-prompt.php?id=<?= $id ?>&delete=1"
+                                       onclick="return confirm('Supprimer ce prompt définitivement ?')">
+                                        <i class="bi bi-trash me-2"></i>Supprimer
+                                    </a>
+                                </li>
                             </ul>
                         </div>
+                        <?php endif; ?>
                     </div>
                     <div class="card-body">
                         <!-- Prompt Content -->
@@ -75,57 +114,60 @@ $top_contributors = [
                             <button class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-3" id="copyPrompt">
                                 <i class="bi bi-clipboard"></i> Copier
                             </button>
-                            <pre class="mb-0 text-light" id="promptContent"><code><?= htmlspecialchars($prompt['content'] ?? '') ?></code></pre>
+                            <pre class="mb-0 text-light" id="promptContent"><code><?= htmlspecialchars($prompt['content']) ?></code></pre>
                         </div>
 
                         <!-- Tags -->
+                        <?php if (!empty($prompt['tags'])): ?>
                         <div class="mb-4">
                             <h6 class="fw-bold mb-3">Tags</h6>
                             <div class="d-flex flex-wrap gap-2">
-                                    <span class="badge bg-secondary">python</span>
-                                    <span class="badge bg-secondary">optimization</span>
-                                    <span class="badge bg-secondary">clean-code</span>
+                                <?php foreach (explode(',', $prompt['tags']) as $tag): ?>
+                                <span class="badge bg-secondary"><?= htmlspecialchars(trim($tag)) ?></span>
+                                <?php endforeach; ?>
                             </div>
                         </div>
+                        <?php endif; ?>
 
                         <!-- Action Buttons -->
-                            <button class="btn btn-primary" id="copyWithVars"><i class="bi bi-clipboard-check me-2"></i>Copier avec variables</button>
-                            <a href="edit-prompt.php?id=1" class="btn btn-outline-secondary"><i class="bi bi-pencil me-2"></i>Modifier</a>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" id="copyWithVars">
+                                <i class="bi bi-clipboard-check me-2"></i>Copier avec variables
+                            </button>
+                            <?php if ($prompt['user_id'] == $user_id || $_SESSION['role'] === 'admin'): ?>
+                            <a href="edit-prompt.php?id=<?= $id ?>" class="btn btn-outline-secondary">
+                                <i class="bi bi-pencil me-2"></i>Modifier
+                            </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Related Prompts -->
+                <?php if (!empty($related_prompts)): ?>
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white border-0 py-3">
                         <h5 class="card-title mb-0 fw-bold">Prompts similaires</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
+                            <?php foreach ($related_prompts as $rp): ?>
                             <div class="col-md-6">
-                                <a href="view-prompt.php?id=2" class="text-decoration-none">
+                                <a href="view-prompt.php?id=<?= $rp['id'] ?>" class="text-decoration-none">
                                     <div class="card border h-100 prompt-card-mini">
                                         <div class="card-body">
-                                            <span class="badge bg-primary-subtle text-primary small mb-2">SQL</span>
-                                            <h6 class="fw-bold text-dark mb-1">Optimize JOIN Query</h6>
-                                            <p class="text-muted small mb-0">Improve performance of complex SQL joins.</p>
+                                            <span class="badge bg-primary-subtle text-primary small mb-2"><?= htmlspecialchars($rp['category']) ?></span>
+                                            <h6 class="fw-bold text-dark mb-1"><?= htmlspecialchars($rp['title']) ?></h6>
+                                            <p class="text-muted small mb-0"><?= htmlspecialchars($rp['description'] ?? '') ?></p>
                                         </div>
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-md-6">
-                                <a href="view-prompt.php?id=3" class="text-decoration-none">
-                                    <div class="card border h-100 prompt-card-mini">
-                                        <div class="card-body">
-                                            <span class="badge bg-primary-subtle text-primary small mb-2">Marketing</span>
-                                            <h6 class="fw-bold text-dark mb-1">Email Campaign Copy</h6>
-                                            <p class="text-muted small mb-0">Professional email copy for product launches.</p>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
 
             <!-- Sidebar: Top Contributors -->
@@ -136,26 +178,20 @@ $top_contributors = [
                     </div>
                     <div class="card-body p-0">
                         <ul class="list-group list-group-flush">
+                            <?php foreach ($top_contributors as $contrib): ?>
                             <li class="list-group-item d-flex align-items-center justify-content-between py-3">
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-sm me-3 bg-warning">DU</div>
+                                    <div class="avatar-sm me-3 bg-primary text-white d-flex align-items-center justify-content-center rounded-circle">
+                                        <?= strtoupper(substr($contrib['username'], 0, 2)) ?>
+                                    </div>
                                     <div>
-                                        <p class="mb-0 fw-medium">Demo User</p>
-                                        <small class="text-muted">Développeur</small>
+                                        <p class="mb-0 fw-medium"><?= htmlspecialchars($contrib['username']) ?></p>
+                                        <small class="text-muted"><?= htmlspecialchars($contrib['role']) ?></small>
                                     </div>
                                 </div>
-                                <span class="badge bg-warning rounded-pill">12</span>
+                                <span class="badge bg-primary rounded-pill"><?= $contrib['total_prompts'] ?></span>
                             </li>
-                            <li class="list-group-item d-flex align-items-center justify-content-between py-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-sm me-3 bg-primary">AD</div>
-                                    <div>
-                                        <p class="mb-0 fw-medium">Alex Dev</p>
-                                        <small class="text-muted">Admin</small>
-                                    </div>
-                                </div>
-                                <span class="badge bg-warning rounded-pill">45</span>
-                            </li>
+                            <?php endforeach; ?>
                         </ul>
                     </div>
                 </div>
@@ -164,7 +200,13 @@ $top_contributors = [
     </div>
 </main>
 
-<!-- Footer and Scripts (same as your template) -->
+<!-- Footer -->
+<footer class="footer bg-light border-top py-3 mt-auto">
+    <div class="container-fluid">
+        <p class="text-muted small mb-0 text-center">&copy; 2026 DevGenius Solutions. Tous droits réservés.</p>
+    </div>
+</footer>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.getElementById('copyPrompt').addEventListener('click', function() {
@@ -173,6 +215,16 @@ document.getElementById('copyPrompt').addEventListener('click', function() {
         this.innerHTML = '<i class="bi bi-check"></i> Copié!';
         setTimeout(() => {
             this.innerHTML = '<i class="bi bi-clipboard"></i> Copier';
+        }, 2000);
+    });
+});
+
+document.getElementById('copyWithVars').addEventListener('click', function() {
+    const content = document.getElementById('promptContent').textContent;
+    navigator.clipboard.writeText(content).then(() => {
+        this.innerHTML = '<i class="bi bi-check me-2"></i>Copié!';
+        setTimeout(() => {
+            this.innerHTML = '<i class="bi bi-clipboard-check me-2"></i>Copier avec variables';
         }, 2000);
     });
 });
